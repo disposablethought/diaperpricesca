@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canadian Diaper Pricer - Find the Best Diaper Deals in Canada</title>
+  <meta name="description" content="Compare diaper prices from all major Canadian retailers. Find the best deals on diapers and save money.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <a href="/">
+          <h1>Canadian <span>Diaper</span> Pricer</h1>
+        </a>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h2>Find the Best Diaper Deals in Canada</h2>
+        <p>Compare prices across major retailers and save up to $450 per year on diapers!</p>
+        <a href="#search-section" class="cta-button">Find Deals Now</a>
+      </div>
+    </section>
+
+    <section id="search-section" class="search-section">
+      <div class="container">
+        <div class="search-header">
+          <h2>Filter Diaper Options</h2>
+          <div class="search-actions">
+            <button id="reset-all-filters" class="reset-filters">Reset All Filters</button>
+          </div>
+        </div>
+        
+        <div class="filters">
+          <div class="filter-group">
+            <h3>Brand</h3>
+            <div class="brand-list" id="brand-filters">
+              <!-- Brand filters will be populated by JavaScript -->
+              <div class="loading">Loading brands...</div>
+            </div>
+          </div>
+          
+          <div class="filter-group">
+            <h3>Size</h3>
+            <div class="size-list" id="size-filters">
+              <!-- Size filters will be populated by JavaScript -->
+              <div class="loading">Loading sizes...</div>
+            </div>
+          </div>
+          
+          <div class="filter-group">
+            <h3>Retailer</h3>
+            <div class="retailer-list" id="retailer-filters">
+              <!-- Retailer filters will be populated by JavaScript -->
+              <div class="loading">Loading retailers...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-section">
+      <div class="container">
+        <div class="results-header">
+          <div class="results-count" id="results-count">
+            Showing <strong>0</strong> diaper products
+          </div>
+          <div class="results-actions">
+            <div class="items-per-page-container">
+              <label for="items-per-page">Show:</label>
+              <select id="items-per-page" class="items-per-page">
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="48">48</option>
+                <option value="96">96</option>
+              </select>
+            </div>
+            <div class="sort-options">
+              <label for="sort-by">Sort by:</label>
+              <select id="sort-by">
+                <option value="price-per-diaper">Price per diaper (lowest first)</option>
+                <option value="total-price">Total price (lowest first)</option>
+                <option value="count">Count (highest first)</option>
+                <option value="brand">Brand (A-Z)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="diaper-results" id="diaper-results">
+          <!-- Results will be populated by JavaScript -->
+          <div class="loading">Finding the best diaper deals for you...</div>
+        </div>
+        
+        <!-- Pagination controls -->
+        <div id="pagination" class="pagination"></div>
+      </div>
+    </section>
+
+    <section class="info-section">
+      <div class="container">
+        <h2>Save Money on Diapers in Canada</h2>
+        <p>Diapers are expensive, and prices fluctuate constantly across Canadian retailers. Our website helps you find the best deals by comparing prices in real-time from major retailers.</p>
+        <p>We calculate the price per diaper to make comparison easy, helping Canadian parents save hundreds of dollars per year.</p>
+        
+        <div class="info-cards">
+          <div class="info-card">
+            <i data-feather="dollar-sign" class="info-card-icon"></i>
+            <h3>Compare Prices</h3>
+            <p>We track diaper prices from Amazon, Walmart, Canadian Tire, Costco, Real Canadian Superstore, Shoppers Drug Mart and more to find you the absolute best deals.</p>
+          </div>
+          
+          <div class="info-card">
+            <i data-feather="calendar" class="info-card-icon"></i>
+            <h3>Updated Daily</h3>
+            <p>Our prices are updated daily to ensure you're always getting accurate information about current diaper pricing across Canada.</p>
+          </div>
+          
+          <div class="info-card">
+            <i data-feather="award" class="info-card-icon"></i>
+            <h3>Price Per Diaper</h3>
+            <p>We calculate the price per individual diaper so you can easily compare value across different package sizes and retailers.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-section pricing-explanation">
+      <div class="container">
+        <h3>Understanding Price Comparisons</h3>
+        <div class="explanation-content">
+          <div class="explanation-item">
+            <i data-feather="percent" class="explanation-icon"></i>
+            <div>
+              <h4>What does "X% cheaper" mean?</h4>
+              <p>When you see a savings percentage (e.g., "40% cheaper"), it means that diaper is cheaper compared to the average price of the same brand and size at other retailers. We only show this tag when the savings is greater than 5%.</p>
+            </div>
+          </div>
+          <div class="explanation-item">
+            <i data-feather="bar-chart-2" class="explanation-icon"></i>
+            <div>
+              <h4>How we calculate savings</h4>
+              <p>We compare a diaper's price to the average price of the same brand and size across all other retailers in our database. For example, if a Huggies Size 3 at Costco costs $0.20 per diaper while the average price elsewhere is $0.33, we'd show it as "40% cheaper".</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-column">
+        <h3>Canadian Diaper Pricer</h3>
+        <ul>
+          <li><a href="/about">About Us</a></li>
+          <li><a href="/contact">Contact Us</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-column">
+        <h3>Popular Brands</h3>
+        <ul>
+          <li><a href="/?brand=Pampers">Pampers Diapers</a></li>
+          <li><a href="/?brand=Huggies">Huggies Diapers</a></li>
+          <li><a href="/?brand=Kirkland">Kirkland Diapers</a></li>
+          <li><a href="/?brand=Seventh+Generation">Seventh Generation</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-column">
+        <h3>Popular Retailers</h3>
+        <ul>
+          <li><a href="/?retailer=Amazon.ca">Amazon.ca</a></li>
+          <li><a href="/?retailer=Walmart+Canada">Walmart Canada</a></li>
+          <li><a href="/?retailer=Costco+Canada">Costco Canada</a></li>
+          <li><a href="/?retailer=Shoppers+Drug+Mart">Shoppers Drug Mart</a></li>
+        </ul>
+      </div>
+      
+      <div class="copyright">
+        <p>&copy; 2025 Canadian Diaper Pricer | All rights reserved</p>
+        <p><small>This site is supported by affiliate links from Canadian retailers</small></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Initialize Feather icons
+    document.addEventListener('DOMContentLoaded', () => {
+      feather.replace();
+    });
+  </script>
+</body>
+</html>

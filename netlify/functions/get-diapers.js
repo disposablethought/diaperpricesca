@@ -161,33 +161,8 @@ async function runScheduledScraping() {
   
   console.log('Scheduled scraping completed');
 }
-    
-// Generate search URL for retailer when direct product link is not available
-function generateSearchUrl(retailer, brand, size) {
-  const searchTerm = `${brand} diapers size ${size}`.toLowerCase();
-  const encodedTerm = encodeURIComponent(searchTerm);
-  
-  switch (retailer?.toLowerCase()) {
-    case 'amazon.ca':
-      return `https://www.amazon.ca/s?k=${encodedTerm}&ref=nb_sb_noss`;
-    case 'walmart canada':
-      return `https://www.walmart.ca/search?q=${encodedTerm}`;
-    case 'canadian tire':
-      return `https://www.canadiantire.ca/en/search-results.html?q=${encodedTerm}`;
-    case 'costco canada':
-      return `https://www.costco.ca/CatalogSearch?dept=All&keyword=${encodedTerm}`;
-    case 'real canadian superstore':
-      return `https://www.realcanadiansuperstore.ca/search?search-bar=${encodedTerm}`;
-    case 'shoppers drug mart':
-      return `https://shop.shoppersdrugmart.ca/en/search?q=${encodedTerm}`;
-    case 'well.ca':
-      return `https://well.ca/searchresult.html?keyword=${encodedTerm}`;
-    default:
-      return `https://www.google.com/search?q=${encodedTerm}+canada`;
-  }
-}
 
-// Enhanced count extraction from product name
+// Enhanced count extraction from product name - moved from legacy cache system
 function extractCount(name) {
   if (!name) return null;
   
@@ -195,21 +170,13 @@ function extractCount(name) {
   
   // Comprehensive regex patterns for diaper counts
   const patterns = [
-    // Standard patterns: "120 Count", "96 ct", "84 pack"
     /(\d+)\s*(count|ct|pack|pcs?|pieces?|diapers?)(?![\d\.])/i,
-    // Size-count patterns: "Size 3, 120 Count", "(120 Count)"
     /size\s*\d+[^\d]*(\d+)\s*(count|ct|pack)/i,
-    // Parenthetical patterns: "(120 Count)", "[96 ct]"
     /[\(\[]\s*(\d+)\s*(count|ct|pack|pcs?)[\)\]]/i,
-    // Hyphenated patterns: "Super-Pack-120ct"
     /-\s*(\d+)\s*(?:ct|count|pack)/i,
-    // Number before "diaper" or "piece": "120 diapers", "96 pieces"
     /(\d+)\s+(?:disposable\s+)?(?:diapers?|pieces?)/i,
-    // Box/case patterns: "Box of 120", "Case 96"
     /(?:box|case)\s*(?:of\s*)?(\d+)/i,
-    // Month supply patterns: "1 Month Supply (120 Count)"
     /month\s+supply[^\d]*(\d+)/i,
-    // Giant pack patterns: "Giant Pack 144"
     /(?:giant|mega|super|jumbo)\s+pack[^\d]*(\d+)/i
   ];
   
@@ -257,216 +224,7 @@ function extractCount(name) {
   }
   
   console.log('No count found, returning null for:', name);
-  return null; // Return null instead of arbitrary default
+  return null;
 }
 
-// Comprehensive Canadian diaper product data with realistic variety
-function getFallbackData() {
-  return [
-    // Amazon.ca Products
-    {
-      brand: "Pampers",
-      type: "Baby Dry Size 3 (198 Count)",
-      size: "3",
-      count: 198,
-      retailer: "Amazon.ca",
-      price: 54.97,
-      pricePerDiaper: 0.28,
-      url: "https://www.amazon.ca/dp/B07FQRZ8QM",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Pampers",
-      type: "Cruisers 360° Size 3 (84 Count)",
-      size: "3",
-      count: 84,
-      retailer: "Amazon.ca",
-      price: 29.97,
-      pricePerDiaper: 0.36,
-      url: "https://www.amazon.ca/dp/B08QY6HT97",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Huggies",
-      type: "Little Snugglers Size 3 (132 Count)",
-      size: "3",
-      count: 132,
-      retailer: "Amazon.ca",
-      price: 47.97,
-      pricePerDiaper: 0.36,
-      url: "https://www.amazon.ca/dp/B07FQRQTGX",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Huggies",
-      type: "Overnites Size 3 (66 Count)",
-      size: "3",
-      count: 66,
-      retailer: "Amazon.ca",
-      price: 26.97,
-      pricePerDiaper: 0.41,
-      url: "https://www.amazon.ca/dp/B07G2XN8H7",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Costco Canada Products
-    {
-      brand: "Kirkland",
-      type: "Signature Size 3 (192 Count)",
-      size: "3",
-      count: 192,
-      retailer: "Costco Canada",
-      price: 49.99,
-      pricePerDiaper: 0.26,
-      url: "https://www.costco.ca/kirkland-signature-diapers-size-3.product.100506047.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Pampers",
-      type: "Baby Dry Size 3 (246 Count)",
-      size: "3",
-      count: 246,
-      retailer: "Costco Canada",
-      price: 64.99,
-      pricePerDiaper: 0.26,
-      url: "https://www.costco.ca/pampers-baby-dry-size-3.product.100506048.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Walmart.ca Products
-    {
-      brand: "Pampers",
-      type: "Cruisers Size 3 (144 Count)",
-      size: "3",
-      count: 144,
-      retailer: "Walmart.ca",
-      price: 52.97,
-      pricePerDiaper: 0.37,
-      url: "https://www.walmart.ca/en/ip/pampers-cruisers-diapers-size-3/6000200832288",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Huggies",
-      type: "Little Movers Size 3 (120 Count)",
-      size: "3",
-      count: 120,
-      retailer: "Walmart.ca",
-      price: 44.97,
-      pricePerDiaper: 0.37,
-      url: "https://www.walmart.ca/en/ip/huggies-little-movers-diapers-size-3/6000200832289",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Well.ca Products
-    {
-      brand: "Seventh Generation",
-      type: "Baby Diapers Size 3 (84 Count)",
-      size: "3",
-      count: 84,
-      retailer: "Well.ca",
-      price: 34.99,
-      pricePerDiaper: 0.42,
-      url: "https://well.ca/products/seventh-generation-baby-diapers_88234.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Honest",
-      type: "Club Box Diapers Size 3 (92 Count)",
-      size: "3",
-      count: 92,
-      retailer: "Well.ca",
-      price: 32.99,
-      pricePerDiaper: 0.36,
-      url: "https://well.ca/products/honest-club-box-diapers-size-3_134567.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Canadian Tire Products
-    {
-      brand: "Pampers",
-      type: "Baby Dry Size 3 (128 Count)",
-      size: "3",
-      count: 128,
-      retailer: "Canadian Tire",
-      price: 42.99,
-      pricePerDiaper: 0.34,
-      url: "https://www.canadiantire.ca/en/pdp/pampers-baby-dry-diapers-size-3-0537021p.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Huggies",
-      type: "Snugglers Size 3 (96 Count)",
-      size: "3",
-      count: 96,
-      retailer: "Canadian Tire",
-      price: 36.99,
-      pricePerDiaper: 0.39,
-      url: "https://www.canadiantire.ca/en/pdp/huggies-snugglers-diapers-size-3-0537022p.html",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Shoppers Drug Mart Products
-    {
-      brand: "Pampers",
-      type: "Cruisers Size 3 (104 Count)",
-      size: "3",
-      count: 104,
-      retailer: "Shoppers Drug Mart",
-      price: 41.99,
-      pricePerDiaper: 0.40,
-      url: "https://www1.shoppersdrugmart.ca/en/health-and-pharmacy/baby-and-kids/pampers-cruisers",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Huggies",
-      type: "Little Snugglers Size 3 (80 Count)",
-      size: "3",
-      count: 80,
-      retailer: "Shoppers Drug Mart",
-      price: 32.99,
-      pricePerDiaper: 0.41,
-      url: "https://www1.shoppersdrugmart.ca/en/health-and-pharmacy/baby-and-kids/huggies-little-snugglers",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    
-    // Real Canadian Superstore Products
-    {
-      brand: "President's Choice",
-      type: "Ultra Soft Diapers Size 3 (120 Count)",
-      size: "3",
-      count: 120,
-      retailer: "Real Canadian Superstore",
-      price: 29.99,
-      pricePerDiaper: 0.25,
-      url: "https://www.realcanadiansuperstore.ca/presidents-choice-ultra-soft-diapers-size-3/p/20978453_EA",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    },
-    {
-      brand: "Pampers",
-      type: "Baby Dry Size 3 (168 Count)",
-      size: "3",
-      count: 168,
-      retailer: "Real Canadian Superstore",
-      price: 49.99,
-      pricePerDiaper: 0.30,
-      url: "https://www.realcanadiansuperstore.ca/pampers-baby-dry-diapers-size-3/p/20978454_EA",
-      inStock: true,
-      lastUpdated: new Date().toISOString()
-    }
-  ];
-}
+// Legacy getFallbackData function removed - data now stored in Neon database

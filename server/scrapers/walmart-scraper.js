@@ -8,7 +8,13 @@ const BaseScraper = require('./base-scraper');
 class WalmartScraper extends BaseScraper {
     constructor() {
         super('Walmart');
-        ac.setAPIKey('10f5426607d3ef5edc72024161c74e13');
+        // Use environment variable for API key security
+        const apiKey = process.env.ANTICAPTCHA_API_KEY;
+        if (apiKey) {
+            ac.setAPIKey(apiKey);
+        } else {
+            console.warn('Anti-Captcha API key not found in environment variables');
+        }
     }
 
         async searchDiapers(searchParams) {

@@ -1,27 +1,46 @@
-// Netlify serverless function to fetch brand data
-const mockData = require('../../server/data/mock-data.js');
-
+// Netlify serverless function to get available brands
 exports.handler = async function(event, context) {
   try {
-    // Extract unique brands from diaper data
-    const diapers = mockData.diapers;
-    const uniqueBrands = [...new Set(diapers.map(diaper => diaper.brand))];
+    // Hardcoded list of popular diaper brands in Canada
+    const brands = [
+      'Pampers',
+      'Huggies', 
+      'Kirkland',
+      'Parents Choice',
+      'Life Brand',
+      'Seventh Generation',
+      'Honest Company',
+      'Presidents Choice',
+      'No Name'
+    ].sort();
     
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
       },
       body: JSON.stringify({
-        brands: uniqueBrands,
-        count: uniqueBrands.length
+        brands: brands,
+        count: brands.length,
+        timestamp: new Date().toISOString()
       })
     };
   } catch (error) {
+    console.error('Error in get-brands function:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch brand data' })
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        error: 'Failed to fetch brands',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
     };
   }
 };

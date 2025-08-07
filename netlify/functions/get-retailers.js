@@ -1,27 +1,44 @@
-// Netlify serverless function to fetch retailer data
-const mockData = require('../../server/data/mock-data.js');
-
+// Netlify serverless function to get available retailers
 exports.handler = async function(event, context) {
   try {
-    // Extract unique retailers from diaper data
-    const diapers = mockData.diapers;
-    const uniqueRetailers = [...new Set(diapers.map(diaper => diaper.retailer))];
+    // Hardcoded list of major Canadian diaper retailers
+    const retailers = [
+      'Amazon.ca',
+      'Walmart Canada', 
+      'Canadian Tire',
+      'Costco Canada',
+      'Real Canadian Superstore',
+      'Shoppers Drug Mart',
+      'Well.ca'
+    ].sort();
     
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
       },
       body: JSON.stringify({
-        retailers: uniqueRetailers,
-        count: uniqueRetailers.length
+        retailers: retailers,
+        count: retailers.length,
+        timestamp: new Date().toISOString()
       })
     };
   } catch (error) {
+    console.error('Error in get-retailers function:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch retailer data' })
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        error: 'Failed to fetch retailers',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
     };
   }
 };

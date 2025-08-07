@@ -1,7 +1,7 @@
 const BaseScraper = require('./base-scraper');
 
 /**
- * Scraper for Real Canadian Superstore
+ * Scraper for Real Canadian Superstore with enhanced anti-blocking
  */
 class SuperstoreScraper extends BaseScraper {
   constructor() {
@@ -10,95 +10,178 @@ class SuperstoreScraper extends BaseScraper {
   }
 
   /**
-   * Search for diapers on Real Canadian Superstore
+   * Get multiple search URL patterns for Real Canadian Superstore
+   * @param {string} searchQuery - The search query
+   * @returns {Array} - Array of URLs to try
+   */
+  getSearchUrls(searchQuery) {
+    const encodedQuery = encodeURIComponent(searchQuery);
+    
+    return [
+      // Standard search
+      `${this.baseUrl}/en/search?search-bar=${encodedQuery}`,
+      // Baby category search
+      `${this.baseUrl}/en/search?search-bar=${encodedQuery}&category=baby`,
+      // Health category search
+      `${this.baseUrl}/en/search?search-bar=${encodedQuery}&category=health`,
+      // Sort by relevance
+      `${this.baseUrl}/en/search?search-bar=${encodedQuery}&sort=relevance`,
+      // Sort by price low to high
+      `${this.baseUrl}/en/search?search-bar=${encodedQuery}&sort=price-asc`
+    ];
+  }
+
+  /**
+   * Search for diapers on Real Canadian Superstore with enhanced anti-blocking
    * @param {Object} params - Search parameters
    * @returns {Promise<Array>} - Array of diaper products
    */
   async searchDiapers(params = {}) {
     try {
-      const brands = params.brands || ['Pampers', 'Huggies', 'Presidents Choice'];
+      const brands = params.brands || ['Pampers', 'Huggies', 'Presidents Choice', 'No Name'];
       const sizes = params.sizes || ['1', '2', '3', '4', '5', '6'];
       const results = [];
 
       for (const brand of brands) {
         for (const size of sizes) {
-          const searchQuery = `${brand} diapers size ${size}`;
-          const encodedQuery = encodeURIComponent(searchQuery);
-          const url = `${this.baseUrl}/en/search?search-bar=${encodedQuery}`;
+          // Try multiple query formats
+          const searchQueries = [
+            `${brand} diapers size ${size}`,
+            `${brand} baby diapers ${size}`,
+            `${brand} size ${size} diapers`
+          ];
           
-          try {
-            console.log(`Searching Real Canadian Superstore for: ${searchQuery}`);
-            const response = await this.makeRequest(url);
-            const $ = this.loadHtml(response.data);
+          let foundProducts = false;
+          
+          for (const searchQuery of searchQueries) {
+            if (foundProducts) break;
             
-            // Process search results
-            $('.product-tile').each((i, element) => {
-              // Only process the first 5 results
-              if (i >= 5) return false;
+            const searchUrls = this.getSearchUrls(searchQuery);
+            
+            for (const url of searchUrls) {
+              if (foundProducts) break;
               
-              // Extract product information
-              const title = $(element).find('.product-name__item--name').text().trim();
-              
-              // Skip if not relevant to diapers or not the right brand
-              if (!title.toLowerCase().includes('diaper') || !title.toLowerCase().includes(brand.toLowerCase())) {
-                return;
+              try {
+                console.log(`Searching Real Canadian Superstore for: ${searchQuery} at ${url}`);
+                const response = await this.makeRequest(url);
+                const $ = this.loadHtml(response.data);
+                
+                // Check for blocking or errors
+                if (response.data.includes('blocked') || response.data.includes('captcha')) {
+                  console.log('Real Canadian Superstore returned blocking page - trying alternate URL');
+                  continue;
+                }
+                
+                // Try multiple selectors for product items
+                const productSelectors = [
+                  '.product-tile',
+                  '.product-card',
+                  '.search-result-item',
+                  '.product-item'
+                ];
+                
+                for (const selector of productSelectors) {
+                  if (foundProducts) break;
+                  
+                  const products = $(selector);
+                  if (products.length === 0) continue;
+                  
+                  products.each((i, element) => {
+                    // Only process the first 5 results
+                    if (i >= 5 || foundProducts) return false;
+                    
+                    // Try multiple selectors for title
+                    const titleSelectors = ['.product-name__item--name', '.product-title', '.item-name', 'h3', 'h4'];
+                    let title = '';
+                    
+                    for (const titleSelector of titleSelectors) {
+                      title = $(element).find(titleSelector).text().trim();
+                      if (title) break;
+                    }
+                    
+                    if (!title) return;
+                    
+                    // Skip if not relevant to diapers or not the right brand
+                    if (!title.toLowerCase().includes('diaper') || !title.toLowerCase().includes(brand.toLowerCase())) {
+                      return;
+                    }
+                    
+                    // Try multiple selectors for price
+                    const priceSelectors = ['.price__amount', '.product-price', '.current-price', '.sale-price'];
+                    let priceText = '';
+                    
+                    for (const priceSelector of priceSelectors) {
+                      priceText = $(element).find(priceSelector).first().text().trim();
+                      if (priceText) break;
+                    }
+                    
+                    const price = this.cleanPrice(priceText);
+                    
+                    if (!price) return;
+                    
+                    // Try multiple selectors for link
+                    const linkSelectors = ['a', '.product-link', '.item-link'];
+                    let link = '';
+                    
+                    for (const linkSelector of linkSelectors) {
+                      const linkEl = $(element).find(linkSelector).first();
+                      link = linkEl.attr('href');
+                      if (link) break;
+                    }
+                    
+                    const fullLink = link && link.startsWith('http') ? link : `${this.baseUrl}${link}`;
+                    
+                    // Try multiple selectors for image
+                    const imageSelectors = ['img', '.product-image img', '.item-image img'];
+                    let imageUrl = '';
+                    
+                    for (const imageSelector of imageSelectors) {
+                      const imgEl = $(element).find(imageSelector).first();
+                      imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-lazy');
+                      if (imageUrl) break;
+                    }
+                    
+                    const fullImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : `${this.baseUrl}${imageUrl}`;
+                    
+                    if (price && price > 0) {
+                      const product = {
+                        name: title,
+                        price: price,
+                        retailer: this.name,
+                        brand: brand,
+                        size: size,
+                        link: fullLink,
+                        image: fullImageUrl,
+                        inStock: true,
+                        lastUpdated: new Date().toISOString()
+                      };
+                      
+                      results.push(product);
+                      foundProducts = true;
+                      console.log(`Found ${this.name} product: ${title} - $${price}`);
+                    }
+                  });
+                  
+                  if (foundProducts) break;
+                }
+                
+                // Add delay between requests
+                await this.delay(this.getRandomDelay(800, 1500));
+                
+              } catch (error) {
+                console.error(`Error searching ${this.name} for ${searchQuery} at ${url}:`, error.message);
+                // Continue with next URL
               }
-              
-              // Extract price
-              const priceText = $(element).find('.price__amount').first().text().trim();
-              const price = this.cleanPrice(priceText);
-              
-              if (!price) return;
-              
-              // Extract product ID
-              const productUrl = $(element).find('a.product-tile__thumbnail__link').attr('href') || '';
-              const productId = productUrl.split('/').pop() || `superstore-${Date.now()}-${i}`;
-              
-              // Extract count (number of diapers)
-              let count = null;
-              // Look for count in the title (e.g., "198 Count")
-              const countMatch = title.match(/(\d+)\s*(count|ct|pack)/i);
-              if (countMatch) {
-                count = parseInt(countMatch[1], 10);
-              }
-              
-              // Skip if we couldn't find a count
-              if (!count) return;
-              
-              // Calculate price per diaper
-              const pricePerDiaper = this.calculatePricePerDiaper(price, count);
-              
-              // Generate full product URL
-              const fullUrl = productUrl.startsWith('http') ? productUrl : `${this.baseUrl}${productUrl}`;
-              
-              results.push({
-                id: productId,
-                brand,
-                type: this.extractDiaperType(title, brand),
-                size,
-                count,
-                retailer: this.name,
-                price,
-                pricePerDiaper,
-                url: fullUrl,
-                lastUpdated: new Date()
-              });
-            });
-            
-            // Wait between requests to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-          } catch (error) {
-            console.error(`Error searching Superstore for ${searchQuery}:`, error.message);
-            // Continue to the next search even if one fails
-            continue;
+            }
           }
         }
       }
       
+      console.log(`${this.name} scraping completed. Found ${results.length} products.`);
       return results;
+      
     } catch (error) {
-      console.error('Error in Superstore scraper:', error);
+      console.error(`Error in ${this.name} scraper:`, error);
       return [];
     }
   }

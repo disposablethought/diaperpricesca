@@ -5,6 +5,44 @@
   box-sizing: border-box;
 }
 
+/* Improve focus management for accessibility */
+*:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --primary-color: #000080;
+    --text-dark: #000000;
+    --text-light: #333333;
+    --border-color: #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 :root {
   --primary-color: #4a6fa5;
   --primary-light: #6e9ad2;
@@ -273,6 +311,17 @@ nav ul li a:hover::after {
   align-items: center;
   gap: 8px;
   position: relative;
+  
+  /* Enhanced touch targets - minimum 44px for accessibility */
+  min-height: 44px;
+  min-width: 44px;
+  
+  /* Better touch feedback */
+  -webkit-tap-highlight-color: rgba(74, 111, 165, 0.2);
+  
+  /* Improve touch interaction */
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .filter-item:hover {

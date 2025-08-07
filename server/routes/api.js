@@ -32,42 +32,15 @@ const updateCache = async () => {
       const duration = (Date.now() - startTime) / 1000;
       console.log(`Cache updated with ${freshData.length} products in ${duration.toFixed(2)} seconds`);
     } else {
-      console.log('No data returned from scrapers, keeping existing cache');
+      console.log('No data returned from scrapers. The cache will not be updated.');
+      // If scraping fails, we can choose to clear the cache or keep stale data.
+      // For now, we'll keep stale data if it exists, otherwise the cache will be empty.
+      // To force a clear, you could uncomment the following line:
+      // cachedDiapers = [];
     }
   } catch (error) {
     console.error('Error updating cache:', error);
-    // If cache update fails but we have existing data, keep using it
-    if (cachedDiapers.length === 0) {
-      // Fallback to demo data if we have no cache and scraping failed
-      console.log('Using fallback demo data');
-      cachedDiapers = [
-        {
-          id: 1,
-          brand: "Pampers",
-          type: "Swaddlers",
-          size: "1",
-          count: 198,
-          retailer: "Amazon.ca",
-          price: 69.99,
-          pricePerDiaper: 0.35,
-          url: "https://www.amazon.ca/example-link",
-          lastUpdated: new Date()
-        },
-        {
-          id: 2,
-          brand: "Huggies",
-          type: "Little Snugglers",
-          size: "1",
-          count: 186,
-          retailer: "Walmart Canada",
-          price: 64.97,
-          pricePerDiaper: 0.35,
-          url: "https://www.walmart.ca/example-link",
-          lastUpdated: new Date()
-        }
-      ];
-      lastCacheUpdate = Date.now();
-    }
+    // We will no longer fallback to mock data. If scraping fails, the cache won't be updated.
   }
 };
 

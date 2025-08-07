@@ -10,18 +10,22 @@
     "test": "jest"
   },
   "dependencies": {
-    "axios": "^1.8.3",
+    "@antiadmin/anticaptchaofficial": "^1.0.53",
+    "axios": "^1.11.0",
     "cheerio": "^1.0.0",
     "express": "^4.18.2",
     "https-proxy-agent": "^7.0.6",
     "mongoose": "^8.0.1",
     "puppeteer": "^24.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "eslint": "^8.54.0",
     "jest": "^29.7.0",
+    "jsdom": "^26.1.0",
     "nodemon": "^3.0.1"
   },
   "engines": {

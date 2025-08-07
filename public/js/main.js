@@ -88,9 +88,15 @@ async function fetchBrands() {
     const brands = data.brands || [];
     
     const brandHTML = brands.map(brand => `
-      <div class="filter-item" data-brand="${brand}" onclick="toggleBrandFilter('${brand}')">
+      <button class="filter-item" data-brand="${brand}" 
+              onclick="toggleBrandFilter('${brand}')" 
+              onkeydown="handleFilterKeydown(event, 'brand', '${brand}')" 
+              role="button" 
+              tabindex="0" 
+              aria-pressed="false"
+              aria-label="Filter by ${brand} brand">
         ${brand}
-      </div>
+      </button>
     `).join('');
     
     brandFiltersEl.innerHTML = brandHTML;
@@ -113,9 +119,15 @@ async function fetchSizes() {
     const sizes = data.sizes || [];
     
     const sizeHTML = sizes.map(size => `
-      <div class="filter-item" data-size="${size}" onclick="toggleSizeFilter('${size}')">
+      <button class="filter-item" data-size="${size}" 
+              onclick="toggleSizeFilter('${size}')" 
+              onkeydown="handleFilterKeydown(event, 'size', '${size}')" 
+              role="button" 
+              tabindex="0" 
+              aria-pressed="false"
+              aria-label="Filter by size ${size}">
         ${size}
-      </div>
+      </button>
     `).join('');
     
     sizeFiltersEl.innerHTML = sizeHTML;
@@ -133,9 +145,15 @@ async function fetchRetailers() {
     const retailers = data.retailers || [];
     
     const retailerHTML = retailers.map(retailer => `
-      <div class="filter-item" data-retailer="${retailer}" onclick="toggleRetailerFilter('${retailer}')">
+      <button class="filter-item" data-retailer="${retailer}" 
+              onclick="toggleRetailerFilter('${retailer}')" 
+              onkeydown="handleFilterKeydown(event, 'retailer', '${retailer}')" 
+              role="button" 
+              tabindex="0" 
+              aria-pressed="false"
+              aria-label="Filter by ${retailer}">
         ${retailer}
-      </div>
+      </button>
     `).join('');
     
     retailerFiltersEl.innerHTML = retailerHTML;
@@ -145,17 +163,41 @@ async function fetchRetailers() {
   }
 }
 
-// Toggle brand filter selection
+// Handle keyboard navigation for filter items
+function handleFilterKeydown(event, filterType, value) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    switch (filterType) {
+      case 'brand':
+        toggleBrandFilter(value);
+        break;
+      case 'size':
+        toggleSizeFilter(value);
+        break;
+      case 'retailer':
+        toggleRetailerFilter(value);
+        break;
+    }
+  }
+}
+
+// Enhanced brand filter with accessibility updates
 function toggleBrandFilter(brand, skipUpdate = false) {
   const filterElement = document.querySelector(`.filter-item[data-brand="${brand}"]`);
   if (!filterElement) return;
   
-  if (activeBrands.has(brand)) {
+  const isActive = activeBrands.has(brand);
+  
+  if (isActive) {
     activeBrands.delete(brand);
     filterElement.classList.remove('active');
+    filterElement.setAttribute('aria-pressed', 'false');
+    announceToScreenReader(`${brand} filter removed`);
   } else {
     activeBrands.add(brand);
     filterElement.classList.add('active');
+    filterElement.setAttribute('aria-pressed', 'true');
+    announceToScreenReader(`${brand} filter applied`);
   }
   
   if (!skipUpdate) {
@@ -163,17 +205,23 @@ function toggleBrandFilter(brand, skipUpdate = false) {
   }
 }
 
-// Toggle size filter selection
+// Enhanced size filter with accessibility updates
 function toggleSizeFilter(size, skipUpdate = false) {
   const filterElement = document.querySelector(`.filter-item[data-size="${size}"]`);
   if (!filterElement) return;
   
-  if (activeSizes.has(size)) {
+  const isActive = activeSizes.has(size);
+  
+  if (isActive) {
     activeSizes.delete(size);
     filterElement.classList.remove('active');
+    filterElement.setAttribute('aria-pressed', 'false');
+    announceToScreenReader(`Size ${size} filter removed`);
   } else {
     activeSizes.add(size);
     filterElement.classList.add('active');
+    filterElement.setAttribute('aria-pressed', 'true');
+    announceToScreenReader(`Size ${size} filter applied`);
   }
   
   if (!skipUpdate) {
@@ -181,17 +229,23 @@ function toggleSizeFilter(size, skipUpdate = false) {
   }
 }
 
-// Toggle retailer filter selection
+// Enhanced retailer filter with accessibility updates
 function toggleRetailerFilter(retailer, skipUpdate = false) {
   const filterElement = document.querySelector(`.filter-item[data-retailer="${retailer}"]`);
   if (!filterElement) return;
   
-  if (activeRetailers.has(retailer)) {
+  const isActive = activeRetailers.has(retailer);
+  
+  if (isActive) {
     activeRetailers.delete(retailer);
     filterElement.classList.remove('active');
+    filterElement.setAttribute('aria-pressed', 'false');
+    announceToScreenReader(`${retailer} filter removed`);
   } else {
     activeRetailers.add(retailer);
     filterElement.classList.add('active');
+    filterElement.setAttribute('aria-pressed', 'true');
+    announceToScreenReader(`${retailer} filter applied`);
   }
   
   if (!skipUpdate) {
@@ -392,20 +446,7 @@ function formatPrice(price) {
   });
 }
 
-// Update results count
-function updateResultsCount() {
-  if (resultsCountEl) {
-    const startItem = (currentPage - 1) * itemsPerPage + 1;
-    const endItem = Math.min(currentPage * itemsPerPage, filteredDiapers.length);
-    const totalItems = filteredDiapers.length;
-    
-    if (totalItems === 0) {
-      resultsCountEl.innerHTML = `No results found`;
-    } else {
-      resultsCountEl.innerHTML = `Showing <strong>${startItem}-${endItem}</strong> of <strong>${totalItems}</strong> diaper product${totalItems !== 1 ? 's' : ''}`;
-    }
-  }
-}
+// Update results count (enhanced version moved below)
 
 // Render the filtered and sorted diaper results
 function renderDiaperResults() {
@@ -573,8 +614,104 @@ function changePage(page) {
   updateUrlParameters();
 }
 
+// Screen reader announcements for accessibility
+function announceToScreenReader(message) {
+  const announcement = document.createElement('div');
+  announcement.setAttribute('aria-live', 'polite');
+  announcement.setAttribute('aria-atomic', 'true');
+  announcement.className = 'sr-only';
+  announcement.textContent = message;
+  
+  document.body.appendChild(announcement);
+  
+  // Remove after announcement
+  setTimeout(() => {
+    document.body.removeChild(announcement);
+  }, 1000);
+}
+
+// Touch gesture support for mobile
+let touchStartX = 0;
+let touchStartY = 0;
+let isScrolling = false;
+
+// Add touch gesture listeners to filter containers
+function initializeTouchGestures() {
+  const filterContainers = ['.brand-list', '.size-list', '.retailer-list'];
+  
+  filterContainers.forEach(selector => {
+    const container = document.querySelector(selector);
+    if (!container) return;
+    
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+  });
+}
+
+function handleTouchStart(e) {
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  isScrolling = false;
+}
+
+function handleTouchMove(e) {
+  if (!touchStartX || !touchStartY) return;
+  
+  const touch = e.touches[0];
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - touchStartY;
+  
+  if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    // Horizontal scroll - allow it
+    isScrolling = true;
+  } else {
+    // Vertical scroll - might conflict with page scroll
+    if (Math.abs(deltaY) > 10) {
+      isScrolling = true;
+    }
+  }
+}
+
+function handleTouchEnd(e) {
+  touchStartX = 0;
+  touchStartY = 0;
+  isScrolling = false;
+}
+
+// Enhanced results count with screen reader support
+function updateResultsCount() {
+  if (resultsCountEl) {
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, filteredDiapers.length);
+    const totalItems = filteredDiapers.length;
+    
+    let message;
+    if (totalItems === 0) {
+      message = 'No results found';
+      resultsCountEl.innerHTML = message;
+    } else {
+      message = `Showing ${startItem}-${endItem} of ${totalItems} diaper product${totalItems !== 1 ? 's' : ''}`;
+      resultsCountEl.innerHTML = `Showing <strong>${startItem}-${endItem}</strong> of <strong>${totalItems}</strong> diaper product${totalItems !== 1 ? 's' : ''}`;
+    }
+    
+    // Announce to screen readers when results change
+    announceToScreenReader(message);
+  }
+}
+
+// Initialize touch gestures when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Existing initialization code...
+  
+  // Initialize touch gestures
+  setTimeout(initializeTouchGestures, 1000); // Wait for filters to load
+});
+
 // Make functions globally available
 window.toggleBrandFilter = toggleBrandFilter;
 window.toggleSizeFilter = toggleSizeFilter;
 window.toggleRetailerFilter = toggleRetailerFilter;
 window.changePage = changePage;
+window.handleFilterKeydown = handleFilterKeydown;

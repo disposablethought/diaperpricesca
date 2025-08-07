@@ -3,9 +3,14 @@ const { neon } = require('@netlify/neon');
 
 class DatabaseService {
   constructor() {
-    // Initialize Neon connection with environment variable
-    this.sql = neon(process.env.DATABASE_URL);
-    console.log('Database service initialized');
+    // Initialize Neon connection with Netlify environment variable
+    // Use unpooled connection for serverless functions (better performance)
+    const dbUrl = process.env.NETLIFY_DATABASE_URL_UNPOOLED || process.env.NETLIFY_DATABASE_URL;
+    if (!dbUrl) {
+      throw new Error('Database URL not found in environment variables');
+    }
+    this.sql = neon(dbUrl);
+    console.log('Database service initialized with Netlify Neon');
   }
 
   // Get all diapers with optional filtering

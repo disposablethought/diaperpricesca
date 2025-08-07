@@ -1,6 +1,10 @@
-// Netlify serverless function to fetch diaper data
+// Netlify serverless function to fetch diaper data from Neon database
 const path = require('path');
 const fs = require('fs');
+
+// Import database service and scrapers
+const DatabaseService = require('../../database/db-service.js');
+const db = new DatabaseService();
 
 // Import individual scrapers for serverless environment
 let amazonScraper;
@@ -12,9 +16,6 @@ try {
   console.log('Could not load Amazon scraper:', error.message);
 }
 
-// Cache for diaper data with scheduled scraping
-let cachedData = null;
-let cacheTimestamp = null;
 // Configurable scraping frequency (default: twice daily = 12 hours)
 const SCRAPING_INTERVAL = process.env.SCRAPING_INTERVAL_HOURS ? 
   parseInt(process.env.SCRAPING_INTERVAL_HOURS) * 60 * 60 * 1000 : 
@@ -22,123 +23,78 @@ const SCRAPING_INTERVAL = process.env.SCRAPING_INTERVAL_HOURS ?
 
 console.log(`Scraping interval set to ${SCRAPING_INTERVAL / (60 * 60 * 1000)} hours`);
 
+// Last scraping timestamp (stored in memory, could be moved to DB)
+let lastScrapingTime = null;
+
 exports.handler = async function(event, context) {
   try {
-    // Get query parameters (if any)
+    // Get query parameters for filtering
     const params = event.queryStringParameters || {};
+    const filters = {
+      brand: params.brand || 'all',
+      size: params.size || 'all', 
+      retailer: params.retailer || 'all',
+      sortBy: params.sortBy || 'pricePerDiaper',
+      sortOrder: params.sortOrder || 'asc'
+    };
     
-    let diapers = [];
+    console.log('Fetching diapers with filters:', filters);
     
-    // Check if we have cached data that's still fresh (scheduled scraping)
+    // Check if we should run scheduled scraping
     const now = Date.now();
-    if (cachedData && cacheTimestamp && (now - cacheTimestamp) < SCRAPING_INTERVAL) {
-      const hoursOld = Math.round((now - cacheTimestamp) / (60 * 60 * 1000) * 10) / 10;
-      console.log(`Using cached diaper data (${hoursOld} hours old)`);
-      diapers = cachedData;
-    } else {
-      // Try to get live data from Amazon scraper (most reliable)
-      if (amazonScraper) {
-        try {
-          console.log('Fetching live diaper data from Amazon scraper...');
-          const scrapingParams = {
-            brands: ['Pampers', 'Huggies'], // Limit to key brands for faster response
-            sizes: ['3'] // Focus only on size 3 diapers
-          };
-          
-          const liveData = await amazonScraper.searchDiapers(scrapingParams);
-          
-          if (liveData && liveData.length > 0) {
-            // Transform data to match frontend expectations
-            diapers = liveData.map(item => {
-              const count = extractCount(item.name);
-              
-              // Skip items where we cannot determine count (prevents meaningless price comparisons)
-              if (!count) {
-                console.log(`Skipping product with undetermined count: ${item.name}`);
-                return null;
-              }
-              
-              let productUrl = item.link || item.url || '#';
-              
-              // Ensure we have a valid URL, create search URL if needed
-              if (!productUrl || productUrl === '#' || !productUrl.startsWith('http')) {
-                productUrl = generateSearchUrl(item.retailer, item.brand, item.size);
-              }
-              
-              return {
-                brand: item.brand || 'Unknown',
-                type: item.name || item.type || 'Diapers',
-                size: item.size || 'Unknown',
-                count: count,
-                retailer: item.retailer || 'Unknown',
-                price: item.price || 0,
-                pricePerDiaper: item.price ? (item.price / count) : 0,
-                url: productUrl,
-                inStock: item.inStock !== false,
-                lastUpdated: item.lastUpdated || new Date().toISOString()
-              };
-            }).filter(item => item !== null); // Remove null items
-            
-            cachedData = diapers;
-            cacheTimestamp = now;
-            console.log(`Successfully fetched ${diapers.length} products from scrapers`);
-          } else {
-            console.log('No live data available, using fallback');
-            diapers = getFallbackData();
-          }
-        } catch (scraperError) {
-          console.log('Error fetching live data:', scraperError.message);
-          diapers = getFallbackData();
-        }
-      } else {
-        console.log('Amazon scraper not available, using fallback data');
-        diapers = getFallbackData();
-      }
+    const shouldScrape = !lastScrapingTime || (now - lastScrapingTime) >= SCRAPING_INTERVAL;
+    
+    if (shouldScrape) {
+      console.log('Running scheduled scraping...');
+      await runScheduledScraping();
+      lastScrapingTime = now;
     }
     
-    // Apply filtering if parameters exist
-    if (params.brand) {
-      diapers = diapers.filter(diaper => 
-        diaper.brand && diaper.brand.toLowerCase() === params.brand.toLowerCase()
-      );
-    }
+    // Get diapers from database with filters
+    let diapers = await db.getAllDiapers(filters);
     
-    if (params.size) {
-      diapers = diapers.filter(diaper => 
-        diaper.size && diaper.size.toLowerCase() === params.size.toLowerCase()
-      );
-    }
+    // Transform database results to match frontend expectations
+    const transformedDiapers = diapers.map(diaper => ({
+      brand: diaper.brand,
+      type: diaper.type,
+      size: diaper.size,
+      count: diaper.count,
+      retailer: diaper.retailer,
+      price: parseFloat(diaper.price),
+      pricePerDiaper: parseFloat(diaper.price_per_diaper),
+      url: diaper.url,
+      inStock: diaper.in_stock,
+      lastUpdated: diaper.updated_at || diaper.last_scraped
+    }));
     
-    if (params.retailer) {
-      diapers = diapers.filter(diaper => 
-        diaper.retailer && diaper.retailer.toLowerCase() === params.retailer.toLowerCase()
-      );
-    }
+    console.log(`Retrieved ${transformedDiapers.length} diapers from database`);
     
+    // Return the filtered and sorted data
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       },
       body: JSON.stringify({
-        diapers: diapers,
-        count: diapers.length,
+        diapers: transformedDiapers,
+        count: transformedDiapers.length,
         timestamp: new Date().toISOString(),
-        source: cachedData ? 'cached' : 'live'
+        dataSource: 'database'
       })
     };
+    
   } catch (error) {
-    console.error('Error in get-diapers function:', error);
+    console.error('Error in get-diapers handler:', error);
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'Failed to fetch diaper data',
         message: error.message,
         timestamp: new Date().toISOString()
@@ -147,6 +103,65 @@ exports.handler = async function(event, context) {
   }
 };
 
+// Scheduled scraping function
+async function runScheduledScraping() {
+  console.log('Starting scheduled scraping of Canadian diaper retailers...');
+  
+  if (amazonScraper) {
+    try {
+      const startTime = Date.now();
+      console.log('Scraping Amazon.ca for fresh diaper data...');
+      
+      const scrapingParams = {
+        brands: ['Pampers', 'Huggies'], // Key brands
+        sizes: ['3'] // Size 3 only
+      };
+      
+      const liveData = await amazonScraper.searchDiapers(scrapingParams);
+      const executionTime = Date.now() - startTime;
+      
+      if (liveData && liveData.length > 0) {
+        // Transform scraped data for database
+        const diaperData = liveData.map(item => {
+          const count = extractCount(item.name);
+          if (!count) return null; // Skip items without valid count
+          
+          return {
+            brand: item.brand,
+            type: item.name || 'Diapers',
+            size: item.size,
+            count: count,
+            retailer: item.retailer,
+            price: item.price,
+            pricePerDiaper: item.price / count,
+            url: item.url || item.link,
+            inStock: item.inStock !== false
+          };
+        }).filter(item => item !== null);
+        
+        // Batch upsert to database
+        if (diaperData.length > 0) {
+          await db.batchUpsertDiapers(diaperData);
+          console.log(`Successfully updated ${diaperData.length} products from Amazon.ca`);
+        }
+        
+        // Log successful scraping
+        await db.logScrapingSession('Amazon.ca', diaperData.length, true, null, executionTime);
+        
+      } else {
+        console.log('No fresh data from Amazon scraper');
+        await db.logScrapingSession('Amazon.ca', 0, false, 'No data returned', executionTime);
+      }
+      
+    } catch (error) {
+      console.error('Error during Amazon scraping:', error);
+      await db.logScrapingSession('Amazon.ca', 0, false, error.message, null);
+    }
+  }
+  
+  console.log('Scheduled scraping completed');
+}
+    
 // Generate search URL for retailer when direct product link is not available
 function generateSearchUrl(retailer, brand, size) {
   const searchTerm = `${brand} diapers size ${size}`.toLowerCase();
